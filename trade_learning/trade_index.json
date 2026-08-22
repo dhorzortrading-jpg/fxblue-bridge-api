@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "description": "Master index of historical trading records used for similarity search, trade review, and win/loss learning.",
+  "last_updated": "",
+  "statistics": {
+    "total_trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "breakeven": 0,
+    "avoided": 0
+  },
+  "trades": []
+}
