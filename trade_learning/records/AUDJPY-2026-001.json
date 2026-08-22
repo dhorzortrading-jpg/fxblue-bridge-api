@@ -1,0 +1,128 @@
+{
+  "trade_id": "AUDJPY-2026-001",
+  "symbol": "AUDJPY",
+  "direction": "BUY",
+  "trade_status": "WATCH",
+  "date": "2026-08-22",
+  "session": "",
+  "execution_timeframe": "M5",
+
+  "higher_timeframe_bias": {
+    "W": "bullish",
+    "D": "bullish",
+    "H4": "bullish",
+    "H1": "bullish"
+  },
+
+  "market_structure": {
+    "trend": "bullish",
+    "protected_high": null,
+    "protected_low": null,
+    "market_structure_shift": false,
+    "break_of_structure": false,
+    "displacement": false
+  },
+
+  "liquidity": {
+    "buy_side_liquidity": 114.165,
+    "sell_side_liquidity": 113.58,
+    "liquidity_sweep": false,
+    "sweep_type": "waiting for sell-side liquidity raid",
+    "liquidity_target": "114.165"
+  },
+
+  "ict_smc_setup": {
+    "premium_discount": "price currently near premium",
+    "fair_value_gap": false,
+    "fvg_type": "waiting for bullish M5 FVG",
+    "order_block": false,
+    "order_block_type": "",
+    "breaker_block": false,
+    "mitigation_block": false,
+    "failed_to_return": false,
+    "balanced_price_range": false,
+    "support_resistance_flip": false,
+    "power_of_three": false,
+    "three_tap_concept": false,
+    "setup_name": "Bullish continuation after sell-side liquidity sweep"
+  },
+
+  "entry_confirmation": {
+    "lower_timeframe": "M5",
+    "mss_confirmed": false,
+    "displacement_confirmed": false,
+    "fvg_created": false,
+    "retest_confirmed": false,
+    "entry_model": "Sell-side sweep -> bullish MSS -> displacement -> FVG retracement"
+  },
+
+  "external_context": {
+    "currency_strength": {
+      "base_score": 100.0,
+      "quote_score": -37.05,
+      "differential": 137.05,
+      "supports_trade": true
+    },
+
+    "sentiment": {
+      "long_percent": null,
+      "short_percent": null,
+      "supports_trade": null,
+      "source": ""
+    },
+
+    "news": {
+      "risk_level": "unknown",
+      "high_impact_event_nearby": false,
+      "event": "",
+      "minutes_to_event": null
+    }
+  },
+
+  "execution": {
+    "entry_price": null,
+    "stop_loss": null,
+    "tp1": null,
+    "tp2": null,
+    "tp3": null,
+    "risk_percent": null,
+    "planned_rr": null
+  },
+
+  "result": {
+    "outcome": "OPEN_WATCH",
+    "r_multiple": null,
+    "profit_loss": null,
+    "maximum_favorable_excursion": null,
+    "maximum_adverse_excursion": null
+  },
+
+  "review": {
+    "setup_quality_score": 7,
+    "execution_quality_score": null,
+    "what_worked": [
+      "Higher-timeframe bullish bias",
+      "AUD stronger than JPY",
+      "Clear liquidity structure"
+    ],
+    "what_failed": [],
+    "mistakes": [],
+    "lesson": "Do not chase price. Wait for sell-side liquidity raid and confirmed M5 bullish MSS/displacement.",
+    "would_take_again": null
+  },
+
+  "references": {
+    "before_trade_screenshot": "",
+    "entry_screenshot": "",
+    "after_trade_screenshot": "",
+    "tradingview_link": "",
+    "journal_reference": ""
+  },
+
+  "system_metadata": {
+    "created_at": "2026-08-22",
+    "updated_at": "2026-08-22",
+    "reviewed": false,
+    "source": "GPT_analysis"
+  }
+}
