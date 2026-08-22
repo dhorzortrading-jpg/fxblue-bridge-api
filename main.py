@@ -1,19 +1,25 @@
 from fastapi import FastAPI, HTTPException, Query
+from pydantic import BaseModel
 from datetime import datetime, timezone
 from collections import defaultdict
+from typing import Optional, List, Dict, Any
 import os
+import json
 import requests
+import psycopg
+from psycopg.rows import dict_row
 
 app = FastAPI(
     title="Trading Research Market Intelligence API",
-    version="2.0.0",
-    description="OANDA-powered market intelligence and currency strength engine."
+    version="3.0.0",
+    description="OANDA market intelligence, currency strength, and trade-learning API."
 )
 
 OANDA_BASE_URL = "https://api-fxpractice.oanda.com"
 
 OANDA_API_TOKEN = os.getenv("OANDA_API_TOKEN")
 OANDA_ACCOUNT_ID = os.getenv("OANDA_ACCOUNT_ID")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 SUPPORTED_TIMEFRAMES = [
     "M1",
@@ -38,6 +44,149 @@ PAIRS = [
 ]
 
 
+# -------------------------------------------------
+# DATABASE
+# -------------------------------------------------
+
+def get_db():
+    if not DATABASE_URL:
+        raise HTTPException(
+            status_code=500,
+            detail="DATABASE_URL is not configured"
+        )
+
+    return psycopg.connect(
+        DATABASE_URL,
+        row_factory=dict_row
+    )
+
+
+def initialize_database():
+    if not DATABASE_URL:
+        return
+
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS trades (
+                    id SERIAL PRIMARY KEY,
+
+                    trade_id VARCHAR(100) UNIQUE NOT NULL,
+
+                    symbol VARCHAR(30) NOT NULL,
+                    direction VARCHAR(10),
+                    trade_status VARCHAR(30),
+
+                    trade_date VARCHAR(30),
+                    session VARCHAR(30),
+                    execution_timeframe VARCHAR(20),
+
+                    setup_quality_score NUMERIC,
+                    execution_quality_score NUMERIC,
+
+                    entry_price NUMERIC,
+                    stop_loss NUMERIC,
+                    tp1 NUMERIC,
+                    tp2 NUMERIC,
+                    tp3 NUMERIC,
+
+                    planned_rr NUMERIC,
+                    risk_percent NUMERIC,
+
+                    outcome VARCHAR(30),
+                    r_multiple NUMERIC,
+                    profit_loss NUMERIC,
+
+                    notes TEXT,
+                    lesson TEXT,
+
+                    setup_data JSONB,
+                    context_data JSONB,
+                    review_data JSONB,
+                    references_data JSONB,
+
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+
+        conn.commit()
+
+
+@app.on_event("startup")
+def startup_event():
+    initialize_database()
+
+
+# -------------------------------------------------
+# MODELS
+# -------------------------------------------------
+
+class TradeIngestRequest(BaseModel):
+    trade_id: str
+    symbol: str
+
+    direction: Optional[str] = None
+    trade_status: Optional[str] = None
+
+    trade_date: Optional[str] = None
+    session: Optional[str] = None
+    execution_timeframe: Optional[str] = None
+
+    setup_quality_score: Optional[float] = None
+    execution_quality_score: Optional[float] = None
+
+    entry_price: Optional[float] = None
+    stop_loss: Optional[float] = None
+    tp1: Optional[float] = None
+    tp2: Optional[float] = None
+    tp3: Optional[float] = None
+
+    planned_rr: Optional[float] = None
+    risk_percent: Optional[float] = None
+
+    outcome: Optional[str] = None
+    r_multiple: Optional[float] = None
+    profit_loss: Optional[float] = None
+
+    notes: Optional[str] = None
+    lesson: Optional[str] = None
+
+    setup_data: Optional[Dict[str, Any]] = None
+    context_data: Optional[Dict[str, Any]] = None
+    review_data: Optional[Dict[str, Any]] = None
+    references_data: Optional[Dict[str, Any]] = None
+
+
+# -------------------------------------------------
+# BASIC ENDPOINTS
+# -------------------------------------------------
+
+@app.get("/")
+def root():
+    return {
+        "status": "ok",
+        "service": "Trading Research Market Intelligence API",
+        "version": "3.0.0"
+    }
+
+
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy",
+        "oanda_token_configured": bool(OANDA_API_TOKEN),
+        "oanda_account_configured": bool(OANDA_ACCOUNT_ID),
+        "database_configured": bool(DATABASE_URL),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+
+# -------------------------------------------------
+# OANDA
+# -------------------------------------------------
+
 def get_headers():
     if not OANDA_API_TOKEN:
         raise HTTPException(
@@ -48,25 +197,6 @@ def get_headers():
     return {
         "Authorization": f"Bearer {OANDA_API_TOKEN}",
         "Content-Type": "application/json"
-    }
-
-
-@app.get("/")
-def root():
-    return {
-        "status": "ok",
-        "service": "Trading Research Market Intelligence API",
-        "version": "2.0.0"
-    }
-
-
-@app.get("/health")
-def health():
-    return {
-        "status": "healthy",
-        "oanda_token_configured": bool(OANDA_API_TOKEN),
-        "oanda_account_configured": bool(OANDA_ACCOUNT_ID),
-        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -88,8 +218,8 @@ def get_oanda_account():
         )
 
         response.raise_for_status()
-        data = response.json()
 
+        data = response.json()
         account = data.get("account", {})
 
         return {
@@ -272,6 +402,10 @@ def market_candles(
     }
 
 
+# -------------------------------------------------
+# CURRENCY STRENGTH
+# -------------------------------------------------
+
 def calculate_pair_change(
     instrument: str,
     granularity: str,
@@ -396,9 +530,7 @@ def currency_strength(
         "method": "Relative percentage-change currency strength",
         "granularity": granularity,
         "lookback_candles": lookback,
-        "timestamp": datetime.now(
-            timezone.utc
-        ).isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "ranking": ranking,
         "pair_changes": pair_results
     }
@@ -477,8 +609,246 @@ def multi_timeframe_currency_strength(
     return {
         "source": "OANDA v20 Practice API",
         "lookback_candles": lookback,
-        "timestamp": datetime.now(
-            timezone.utc
-        ).isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "timeframes": results
     }
+
+
+# -------------------------------------------------
+# TRADE LEARNING
+# -------------------------------------------------
+
+@app.post("/trades/ingest")
+def ingest_trade(trade: TradeIngestRequest):
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+
+                cur.execute(
+                    """
+                    INSERT INTO trades (
+                        trade_id,
+                        symbol,
+                        direction,
+                        trade_status,
+                        trade_date,
+                        session,
+                        execution_timeframe,
+                        setup_quality_score,
+                        execution_quality_score,
+                        entry_price,
+                        stop_loss,
+                        tp1,
+                        tp2,
+                        tp3,
+                        planned_rr,
+                        risk_percent,
+                        outcome,
+                        r_multiple,
+                        profit_loss,
+                        notes,
+                        lesson,
+                        setup_data,
+                        context_data,
+                        review_data,
+                        references_data
+                    )
+                    VALUES (
+                        %s,%s,%s,%s,%s,%s,%s,
+                        %s,%s,%s,%s,%s,%s,%s,
+                        %s,%s,%s,%s,%s,%s,%s,
+                        %s,%s,%s,%s
+                    )
+                    ON CONFLICT (trade_id)
+                    DO UPDATE SET
+                        symbol = EXCLUDED.symbol,
+                        direction = EXCLUDED.direction,
+                        trade_status = EXCLUDED.trade_status,
+                        trade_date = EXCLUDED.trade_date,
+                        session = EXCLUDED.session,
+                        execution_timeframe = EXCLUDED.execution_timeframe,
+                        setup_quality_score = EXCLUDED.setup_quality_score,
+                        execution_quality_score = EXCLUDED.execution_quality_score,
+                        entry_price = EXCLUDED.entry_price,
+                        stop_loss = EXCLUDED.stop_loss,
+                        tp1 = EXCLUDED.tp1,
+                        tp2 = EXCLUDED.tp2,
+                        tp3 = EXCLUDED.tp3,
+                        planned_rr = EXCLUDED.planned_rr,
+                        risk_percent = EXCLUDED.risk_percent,
+                        outcome = EXCLUDED.outcome,
+                        r_multiple = EXCLUDED.r_multiple,
+                        profit_loss = EXCLUDED.profit_loss,
+                        notes = EXCLUDED.notes,
+                        lesson = EXCLUDED.lesson,
+                        setup_data = EXCLUDED.setup_data,
+                        context_data = EXCLUDED.context_data,
+                        review_data = EXCLUDED.review_data,
+                        references_data = EXCLUDED.references_data,
+                        updated_at = NOW()
+                    RETURNING *
+                    """,
+                    (
+                        trade.trade_id,
+                        trade.symbol.upper(),
+                        trade.direction,
+                        trade.trade_status,
+                        trade.trade_date,
+                        trade.session,
+                        trade.execution_timeframe,
+                        trade.setup_quality_score,
+                        trade.execution_quality_score,
+                        trade.entry_price,
+                        trade.stop_loss,
+                        trade.tp1,
+                        trade.tp2,
+                        trade.tp3,
+                        trade.planned_rr,
+                        trade.risk_percent,
+                        trade.outcome,
+                        trade.r_multiple,
+                        trade.profit_loss,
+                        trade.notes,
+                        trade.lesson,
+                        json.dumps(trade.setup_data or {}),
+                        json.dumps(trade.context_data or {}),
+                        json.dumps(trade.review_data or {}),
+                        json.dumps(trade.references_data or {})
+                    )
+                )
+
+                saved_trade = cur.fetchone()
+
+            conn.commit()
+
+        return {
+            "status": "saved",
+            "trade": saved_trade
+        }
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Trade ingestion failed: {str(exc)}"
+        )
+
+
+@app.get("/trades")
+def get_trades(
+    symbol: Optional[str] = None,
+    outcome: Optional[str] = None,
+    limit: int = Query(default=50, ge=1, le=500)
+):
+
+    try:
+        query = "SELECT * FROM trades"
+        conditions = []
+        values = []
+
+        if symbol:
+            conditions.append("symbol = %s")
+            values.append(symbol.upper())
+
+        if outcome:
+            conditions.append("outcome = %s")
+            values.append(outcome.upper())
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        query += " ORDER BY created_at DESC LIMIT %s"
+        values.append(limit)
+
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, values)
+                trades = cur.fetchall()
+
+        return {
+            "count": len(trades),
+            "trades": trades
+        }
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Trade retrieval failed: {str(exc)}"
+        )
+
+
+@app.get("/trades/{trade_id}")
+def get_trade(trade_id: str):
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+
+                cur.execute(
+                    """
+                    SELECT *
+                    FROM trades
+                    WHERE trade_id = %s
+                    """,
+                    (trade_id,)
+                )
+
+                trade = cur.fetchone()
+
+        if not trade:
+            raise HTTPException(
+                status_code=404,
+                detail="Trade not found"
+            )
+
+        return trade
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Trade retrieval failed: {str(exc)}"
+        )
+
+
+@app.get("/trades/stats/summary")
+def trade_statistics():
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+
+                cur.execute("""
+                    SELECT
+                        COUNT(*) AS total_trades,
+
+                        COUNT(*) FILTER (
+                            WHERE UPPER(outcome) = 'WIN'
+                        ) AS wins,
+
+                        COUNT(*) FILTER (
+                            WHERE UPPER(outcome) = 'LOSS'
+                        ) AS losses,
+
+                        COUNT(*) FILTER (
+                            WHERE UPPER(outcome) = 'BREAKEVEN'
+                        ) AS breakeven,
+
+                        AVG(r_multiple) AS average_r,
+
+                        SUM(profit_loss) AS total_profit_loss
+
+                    FROM trades
+                """)
+
+                stats = cur.fetchone()
+
+        return stats
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Trade statistics failed: {str(exc)}"
+        )
