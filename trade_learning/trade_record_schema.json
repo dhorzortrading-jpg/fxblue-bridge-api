@@ -1,0 +1,124 @@
+{
+  "trade_id": "",
+  "symbol": "",
+  "direction": "",
+  "trade_status": "",
+  "date": "",
+  "session": "",
+  "execution_timeframe": "",
+
+  "higher_timeframe_bias": {
+    "W": "",
+    "D": "",
+    "H4": "",
+    "H1": ""
+  },
+
+  "market_structure": {
+    "trend": "",
+    "protected_high": null,
+    "protected_low": null,
+    "market_structure_shift": false,
+    "break_of_structure": false,
+    "displacement": false
+  },
+
+  "liquidity": {
+    "buy_side_liquidity": null,
+    "sell_side_liquidity": null,
+    "liquidity_sweep": false,
+    "sweep_type": "",
+    "liquidity_target": ""
+  },
+
+  "ict_smc_setup": {
+    "premium_discount": "",
+    "fair_value_gap": false,
+    "fvg_type": "",
+    "order_block": false,
+    "order_block_type": "",
+    "breaker_block": false,
+    "mitigation_block": false,
+    "failed_to_return": false,
+    "balanced_price_range": false,
+    "support_resistance_flip": false,
+    "power_of_three": false,
+    "three_tap_concept": false,
+    "setup_name": ""
+  },
+
+  "entry_confirmation": {
+    "lower_timeframe": "",
+    "mss_confirmed": false,
+    "displacement_confirmed": false,
+    "fvg_created": false,
+    "retest_confirmed": false,
+    "entry_model": ""
+  },
+
+  "external_context": {
+    "currency_strength": {
+      "base_score": null,
+      "quote_score": null,
+      "differential": null,
+      "supports_trade": null
+    },
+
+    "sentiment": {
+      "long_percent": null,
+      "short_percent": null,
+      "supports_trade": null,
+      "source": ""
+    },
+
+    "news": {
+      "risk_level": "",
+      "high_impact_event_nearby": false,
+      "event": "",
+      "minutes_to_event": null
+    }
+  },
+
+  "execution": {
+    "entry_price": null,
+    "stop_loss": null,
+    "tp1": null,
+    "tp2": null,
+    "tp3": null,
+    "risk_percent": null,
+    "planned_rr": null
+  },
+
+  "result": {
+    "outcome": "",
+    "r_multiple": null,
+    "profit_loss": null,
+    "maximum_favorable_excursion": null,
+    "maximum_adverse_excursion": null
+  },
+
+  "review": {
+    "setup_quality_score": null,
+    "execution_quality_score": null,
+    "what_worked": [],
+    "what_failed": [],
+    "mistakes": [],
+    "lesson": "",
+    "would_take_again": null
+  },
+
+  "references": {
+    "before_trade_screenshot": "",
+    "entry_screenshot": "",
+    "after_trade_screenshot": "",
+    "tradingview_link": "",
+    "journal_reference": ""
+  },
+
+  "system_metadata": {
+    "created_at": "",
+    "updated_at": "",
+    "reviewed": false,
+    "source": "manual_or_screenshot_ingestion"
+  }
+}
