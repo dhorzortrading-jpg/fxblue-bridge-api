@@ -1,0 +1,29 @@
+{
+  "registry_version": "2.0",
+  "description": "Central registry for structured trading rules extracted from uploaded PDFs, lectures, courses, and strategy documents.",
+
+  "methodologies": [],
+
+  "documents": [],
+
+  "rules": [],
+
+  "concept_index": {},
+
+  "document_index": {},
+
+  "conflict_index": [],
+
+  "review_queue": [],
+
+  "statistics": {
+    "total_rules": 0,
+    "verified_rules": 0,
+    "reviewed_rules": 0,
+    "unreviewed_rules": 0,
+    "conflict_rules": 0,
+    "rejected_rules": 0,
+    "total_documents": 0,
+    "total_methodologies": 0
+  }
+}
