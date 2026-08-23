@@ -34,6 +34,7 @@ SUPPORTED_TIMEFRAMES = [
 
 PAIRS = [
     "EUR_USD",
+    "XAU_USD",
     "BTC_USD",
     "ETH_USD",
     "GBP_USD",
