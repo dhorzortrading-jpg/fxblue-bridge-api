@@ -34,6 +34,8 @@ SUPPORTED_TIMEFRAMES = [
 
 PAIRS = [
     "EUR_USD",
+    "BTC_USD",
+    "ETH_USD",
     "GBP_USD",
     "USD_JPY",
     "GBP_JPY",
@@ -855,18 +857,17 @@ def trade_statistics():
 # ============================================================
 # OANDA MULTI-TIMEFRAME MARKET DATA
 # ============================================================
-
 @app.get("/market-multitimeframe")
 def get_market_multitimeframe(
-    instrument: str = Query("EUR_USD"),
-    count: int = Query(100, ge=10, le=500)
+    instrument: str = Query(...),
+    count: int = Query(100, ge=20, le=500),
 ):
     """
-    Retrieve OANDA candle data across all core analysis
-    timeframes in one request.
+    Retrieve and summarize OANDA candle data across:
+    W, D, H4, H1, M30, M15, M5, M1.
 
-    Timeframes:
-    W, D, H4, H1, M30, M15, M5, M1
+    The endpoint can internally use up to hundreds of candles per
+    timeframe while returning a compact response suitable for GPT Actions.
     """
 
     timeframes = [
@@ -880,17 +881,22 @@ def get_market_multitimeframe(
         "M1",
     ]
 
-    # Validate instrument if PAIRS is defined in this application.
+    instrument = instrument.upper().strip()
+
     if instrument not in PAIRS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported instrument: {instrument}"
+            detail={
+                "error": "Unsupported instrument",
+                "instrument": instrument,
+                "supported_instruments": sorted(PAIRS),
+            },
         )
 
     if not OANDA_API_TOKEN:
         raise HTTPException(
             status_code=500,
-            detail="OANDA API token is not configured"
+            detail="OANDA API token is not configured",
         )
 
     headers = {
@@ -901,7 +907,6 @@ def get_market_multitimeframe(
     results = {}
 
     for timeframe in timeframes:
-
         try:
             url = (
                 f"{OANDA_BASE_URL}/v3/instruments/"
@@ -930,55 +935,124 @@ def get_market_multitimeframe(
                 continue
 
             data = response.json()
-
             raw_candles = data.get("candles", [])
 
             candles = []
 
             for candle in raw_candles:
+                mid = candle.get("mid", {})
 
-                midpoint = candle.get("mid", {})
+                if not mid:
+                    continue
 
-                candles.append({
-                    "time": candle.get("time"),
-                    "complete": candle.get("complete"),
-                    "volume": candle.get("volume"),
-                    "open": midpoint.get("o"),
-                    "high": midpoint.get("h"),
-                    "low": midpoint.get("l"),
-                    "close": midpoint.get("c"),
-                })
+                candles.append(
+                    {
+                        "time": candle.get("time"),
+                        "complete": candle.get("complete"),
+                        "volume": candle.get("volume"),
+                        "open": float(mid["o"]),
+                        "high": float(mid["h"]),
+                        "low": float(mid["l"]),
+                        "close": float(mid["c"]),
+                    }
+                )
+
+            if not candles:
+                results[timeframe] = {
+                    "status": "error",
+                    "error": "No candles returned",
+                }
+                continue
 
             completed = [
-                candle
-                for candle in candles
-                if candle.get("complete") is True
+                c for c in candles
+                if c.get("complete") is True
             ]
+
+            analysis_candles = completed if completed else candles
+
+            highs = [c["high"] for c in analysis_candles]
+            lows = [c["low"] for c in analysis_candles]
+            closes = [c["close"] for c in analysis_candles]
+
+            range_high = max(highs)
+            range_low = min(lows)
+
+            equilibrium = (
+                (range_high + range_low) / 2
+                if range_high is not None
+                and range_low is not None
+                else None
+            )
+
+            last_close = closes[-1]
+
+            if last_close > equilibrium:
+                dealing_range_location = "premium"
+            elif last_close < equilibrium:
+                dealing_range_location = "discount"
+            else:
+                dealing_range_location = "equilibrium"
+
+            recent = analysis_candles[-10:]
+
+            recent_high = max(
+                c["high"] for c in recent
+            )
+
+            recent_low = min(
+                c["low"] for c in recent
+            )
+
+            first_close = analysis_candles[0]["close"]
+
+            if last_close > first_close:
+                directional_change = "up"
+            elif last_close < first_close:
+                directional_change = "down"
+            else:
+                directional_change = "flat"
 
             results[timeframe] = {
                 "status": "ok",
                 "instrument": instrument,
                 "granularity": timeframe,
+
                 "requested_count": count,
                 "returned_count": len(candles),
                 "completed_count": len(completed),
-                "first_timestamp": (
-                    candles[0]["time"]
-                    if candles else None
-                ),
-                "last_timestamp": (
-                    candles[-1]["time"]
-                    if candles else None
-                ),
-                "candles": candles,
+
+                "first_timestamp": analysis_candles[0]["time"],
+                "last_timestamp": analysis_candles[-1]["time"],
+
+                "first_close": first_close,
+                "last_close": last_close,
+
+                "range_high": range_high,
+                "range_low": range_low,
+                "equilibrium": equilibrium,
+                "dealing_range_location": dealing_range_location,
+
+                "recent_high": recent_high,
+                "recent_low": recent_low,
+
+                "directional_change": directional_change,
+
+                "latest_completed_candles": analysis_candles[-12:],
             }
 
         except requests.RequestException as exc:
-
             results[timeframe] = {
                 "status": "error",
                 "granularity": timeframe,
                 "error": str(exc),
+            }
+
+        except Exception as exc:
+            results[timeframe] = {
+                "status": "error",
+                "granularity": timeframe,
+                "error": f"Processing error: {str(exc)}",
             }
 
     successful = sum(
@@ -990,10 +1064,18 @@ def get_market_multitimeframe(
     return {
         "source": "OANDA v20 Practice API",
         "instrument": instrument,
+
         "requested_candles_per_timeframe": count,
+
         "requested_timeframes": timeframes,
+
         "successful_timeframes": successful,
         "total_timeframes": len(timeframes),
-        "all_timeframes_successful": successful == len(timeframes),
+
+        "all_timeframes_successful":
+            successful == len(timeframes),
+
+        "response_mode": "compact analytical dataset",
+
         "timeframes": results,
     }
