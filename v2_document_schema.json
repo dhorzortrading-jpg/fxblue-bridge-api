@@ -1,0 +1,52 @@
+{
+  "document_id": "",
+  "methodology": "",
+  "course": "",
+  "month": null,
+  "lecturer": null,
+
+  "document_name": "",
+  "document_type": "pdf",
+
+  "source_category": "trading_knowledge",
+  "language": "en",
+
+  "topics": [],
+  "concepts": [],
+
+  "page_count": null,
+
+  "processing_status": "unprocessed",
+  "review_status": "unreviewed",
+
+  "extraction": {
+    "rules_extracted": 0,
+    "definitions_extracted": 0,
+    "entry_models_extracted": 0,
+    "risk_rules_extracted": 0,
+    "warnings_extracted": 0,
+    "conflicts_found": 0
+  },
+
+  "provenance": {
+    "original_filename": "",
+    "course_position": null,
+    "lesson_number": null,
+    "uploaded_source": "custom_gpt_knowledge"
+  },
+
+  "quality": {
+    "text_readability": "unknown",
+    "image_content_present": false,
+    "manual_review_required": false,
+    "extraction_confidence": 0.0
+  },
+
+  "relationships": {
+    "previous_document": null,
+    "next_document": null,
+    "related_documents": []
+  },
+
+  "notes": ""
+}
