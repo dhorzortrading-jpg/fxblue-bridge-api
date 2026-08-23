@@ -1,0 +1,64 @@
+{
+  "rule_id": "",
+  "methodology": "",
+  "course": "",
+  "document": "",
+  "lesson": "",
+  "page": null,
+
+  "concept": "",
+  "subcategory": "",
+  "definition": "",
+
+  "market_context": {
+    "direction": "any",
+    "timeframe_role": "any",
+    "session": null
+  },
+
+  "required_conditions": [],
+  "confirmation_conditions": [],
+  "invalidation_conditions": [],
+  "avoid_conditions": [],
+
+  "liquidity_context": {
+    "required": false,
+    "type": "any",
+    "notes": ""
+  },
+
+  "structure_context": {
+    "required": false,
+    "required_sequence": [],
+    "protected_level_rule": null
+  },
+
+  "poi_context": {
+    "required": false,
+    "allowed_types": []
+  },
+
+  "entry_model": {
+    "trigger": "",
+    "entry_zone": "",
+    "confirmation_timeframe": "any"
+  },
+
+  "risk_logic": {
+    "stop_rule": "",
+    "target_rule": "",
+    "minimum_rr": null
+  },
+
+  "relationships": {
+    "supports": [],
+    "requires": [],
+    "conflicts_with": [],
+    "related_rules": []
+  },
+
+  "source_summary": "",
+  "tags": [],
+  "extraction_confidence": 0.0,
+  "review_status": "unreviewed"
+}
