@@ -1,0 +1,14 @@
+{
+  "registry_version": "2.0",
+  "description": "Document registry for all trading PDFs, lectures, course notes, and strategy files used by the Version 2 rule intelligence engine.",
+
+  "documents": [],
+
+  "statistics": {
+    "total_documents": 0,
+    "processed_documents": 0,
+    "unprocessed_documents": 0,
+    "verified_documents": 0,
+    "failed_documents": 0
+  }
+}
