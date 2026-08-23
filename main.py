@@ -852,3 +852,148 @@ def trade_statistics():
             status_code=500,
             detail=f"Trade statistics failed: {str(exc)}"
         )
+# ============================================================
+# OANDA MULTI-TIMEFRAME MARKET DATA
+# ============================================================
+
+@app.get("/market-multitimeframe")
+def get_market_multitimeframe(
+    instrument: str = Query("EUR_USD"),
+    count: int = Query(100, ge=10, le=500)
+):
+    """
+    Retrieve OANDA candle data across all core analysis
+    timeframes in one request.
+
+    Timeframes:
+    W, D, H4, H1, M30, M15, M5, M1
+    """
+
+    timeframes = [
+        "W",
+        "D",
+        "H4",
+        "H1",
+        "M30",
+        "M15",
+        "M5",
+        "M1",
+    ]
+
+    # Validate instrument if PAIRS is defined in this application.
+    if instrument not in PAIRS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported instrument: {instrument}"
+        )
+
+    if not OANDA_API_TOKEN:
+        raise HTTPException(
+            status_code=500,
+            detail="OANDA API token is not configured"
+        )
+
+    headers = {
+        "Authorization": f"Bearer {OANDA_API_TOKEN}",
+        "Content-Type": "application/json",
+    }
+
+    results = {}
+
+    for timeframe in timeframes:
+
+        try:
+            url = (
+                f"{OANDA_BASE_URL}/v3/instruments/"
+                f"{instrument}/candles"
+            )
+
+            params = {
+                "granularity": timeframe,
+                "count": count,
+                "price": "M",
+            }
+
+            response = requests.get(
+                url,
+                headers=headers,
+                params=params,
+                timeout=20,
+            )
+
+            if response.status_code != 200:
+                results[timeframe] = {
+                    "status": "error",
+                    "http_status": response.status_code,
+                    "error": response.text,
+                }
+                continue
+
+            data = response.json()
+
+            raw_candles = data.get("candles", [])
+
+            candles = []
+
+            for candle in raw_candles:
+
+                midpoint = candle.get("mid", {})
+
+                candles.append({
+                    "time": candle.get("time"),
+                    "complete": candle.get("complete"),
+                    "volume": candle.get("volume"),
+                    "open": midpoint.get("o"),
+                    "high": midpoint.get("h"),
+                    "low": midpoint.get("l"),
+                    "close": midpoint.get("c"),
+                })
+
+            completed = [
+                candle
+                for candle in candles
+                if candle.get("complete") is True
+            ]
+
+            results[timeframe] = {
+                "status": "ok",
+                "instrument": instrument,
+                "granularity": timeframe,
+                "requested_count": count,
+                "returned_count": len(candles),
+                "completed_count": len(completed),
+                "first_timestamp": (
+                    candles[0]["time"]
+                    if candles else None
+                ),
+                "last_timestamp": (
+                    candles[-1]["time"]
+                    if candles else None
+                ),
+                "candles": candles,
+            }
+
+        except requests.RequestException as exc:
+
+            results[timeframe] = {
+                "status": "error",
+                "granularity": timeframe,
+                "error": str(exc),
+            }
+
+    successful = sum(
+        1
+        for result in results.values()
+        if result.get("status") == "ok"
+    )
+
+    return {
+        "source": "OANDA v20 Practice API",
+        "instrument": instrument,
+        "requested_candles_per_timeframe": count,
+        "requested_timeframes": timeframes,
+        "successful_timeframes": successful,
+        "total_timeframes": len(timeframes),
+        "all_timeframes_successful": successful == len(timeframes),
+        "timeframes": results,
+    }
